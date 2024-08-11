@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use alloc::string::ToString;
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use alloc::{format, vec};
 
@@ -131,8 +132,8 @@ macro_rules! instantiate_test_for_hasher {
 }
 
 fn test_insert_to_empty_tree<H: SimpleHasher>() {
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     // Tree is initially empty. Root is a null node. We'll insert a key-value pair which creates a
     // leaf node.
@@ -158,8 +159,8 @@ fn test_insert_to_empty_tree<H: SimpleHasher>() {
 }
 
 fn test_insert_at_leaf_with_internal_created<H: SimpleHasher>() {
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     let key1 = KeyHash([0u8; 32]);
     let value1 = vec![1u8, 2u8];
@@ -227,8 +228,8 @@ fn test_insert_at_leaf_with_internal_created<H: SimpleHasher>() {
 }
 
 fn test_insert_at_leaf_with_multiple_internals_created<H: SimpleHasher>() {
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     // 1. Insert the first leaf into empty tree
     let key1 = KeyHash([0u8; 32]);
@@ -387,7 +388,7 @@ fn test_batch_insertion<H: SimpleHasher>() {
     let mut to_verify = one_batch.clone();
     // key2 was updated so we remove it.
     to_verify.remove(1);
-    let verify_fn = |tree: &JellyfishMerkleTree<MockTreeStore, H>, version: Version| {
+    let verify_fn = |tree: &JellyfishMerkleTree<Arc<MockTreeStore>, H>, version: Version| {
         to_verify
             .iter()
             .for_each(|(k, v)| assert_eq!(Some(tree.get(*k, version).unwrap().unwrap()), *v))
@@ -395,8 +396,8 @@ fn test_batch_insertion<H: SimpleHasher>() {
 
     // Insert as one batch and update one by one.
     {
-        let db = MockTreeStore::default();
-        let tree = JellyfishMerkleTree::new(&db);
+        let db = Arc::new(MockTreeStore::default());
+        let tree = JellyfishMerkleTree::new(db.clone());
 
         let (_root, batch) = tree.put_value_set(one_batch, 0 /* version */).unwrap();
         db.write_tree_update_batch(batch).unwrap();
@@ -408,8 +409,8 @@ fn test_batch_insertion<H: SimpleHasher>() {
 
     // Insert in multiple batches.
     {
-        let db = MockTreeStore::default();
-        let tree = JellyfishMerkleTree::new(&db);
+        let db = Arc::new(MockTreeStore::default());
+        let tree = JellyfishMerkleTree::new(db.clone());
 
         let (_roots, batch) = tree.put_value_sets(batches, 0 /* first_version */).unwrap();
         db.write_tree_update_batch(batch).unwrap();
@@ -510,8 +511,8 @@ fn test_batch_insertion<H: SimpleHasher>() {
 }
 
 fn test_non_existence<H: SimpleHasher>() {
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
     // ```text
     //                     internal(root)
     //                    /        \
@@ -580,8 +581,8 @@ fn test_non_existence<H: SimpleHasher>() {
 }
 
 fn test_missing_root<H: SimpleHasher>() {
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
     let err = tree
         .get_with_proof(KeyHash::with::<H>(b"testkey"), 0)
         .err()
@@ -592,8 +593,8 @@ fn test_missing_root<H: SimpleHasher>() {
 }
 
 fn test_non_batch_empty_write_set<H: SimpleHasher>() {
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
     let (_, batch) = tree.put_value_set(vec![], 0 /* version */).unwrap();
     db.write_tree_update_batch(batch).unwrap();
     let root = tree.get_root_hash(0).unwrap();
@@ -616,8 +617,8 @@ fn test_put_value_sets<H: SimpleHasher>() {
             .clone()
             .into_iter()
             .zip(values.clone().into_iter().map(Some));
-        let db = MockTreeStore::default();
-        let tree = JellyfishMerkleTree::<_, H>::new(&db);
+        let db = Arc::new(MockTreeStore::default());
+        let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
         for version in 0..10 {
             let mut keyed_value_set = vec![];
             for _ in 0..total_updates / 10 {
@@ -637,8 +638,8 @@ fn test_put_value_sets<H: SimpleHasher>() {
     }
     {
         let mut iter = keys.into_iter().zip(values.into_iter());
-        let db = MockTreeStore::default();
-        let tree = JellyfishMerkleTree::<_, H>::new(&db);
+        let db = Arc::new(MockTreeStore::default());
+        let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
         let mut value_sets = vec![];
         for _ in 0..10 {
             let mut keyed_value_set = vec![];
@@ -661,8 +662,8 @@ fn many_keys_get_proof_and_verify_tree_root<H: SimpleHasher>(seed: &[u8], num_ke
     actual_seed[..seed.len()].copy_from_slice(seed);
     let _rng: StdRng = StdRng::from_seed(actual_seed);
 
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     let mut kvs = vec![];
     for i in 0..num_keys {
@@ -694,8 +695,8 @@ fn many_versions_get_proof_and_verify_tree_root<H: SimpleHasher>(seed: &[u8], nu
     actual_seed[..seed.len()].copy_from_slice(seed);
     let mut rng: StdRng = StdRng::from_seed(actual_seed);
 
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     let mut kvs = vec![];
     let mut roots = vec![];
@@ -746,8 +747,8 @@ fn test_1000_versions<H: SimpleHasher>() {
 }
 
 fn test_delete_then_get_in_one<H: SimpleHasher>() {
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     let key1: KeyHash = KeyHash([1; 32]);
     let key2: KeyHash = KeyHash([2; 32]);
@@ -764,8 +765,8 @@ fn test_delete_then_get_in_one<H: SimpleHasher>() {
 }
 
 fn test_two_gets_then_delete<H: SimpleHasher>() {
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     let key1: KeyHash = KeyHash([1; 32]);
 

@@ -50,11 +50,11 @@ pub fn plus_one(key: KeyHash) -> KeyHash {
 /// Initializes a DB with a set of key-value pairs by inserting one key at each version.
 pub fn init_mock_db<H: SimpleHasher>(
     kvs: &HashMap<KeyHash, OwnedValue>,
-) -> (MockTreeStore, Version) {
+) -> (Arc<MockTreeStore>, Version) {
     assert!(!kvs.is_empty());
 
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     for (i, (key, value)) in kvs.clone().into_iter().enumerate() {
         let (_root_hash, write_batch) = tree
@@ -71,11 +71,11 @@ pub fn init_mock_db<H: SimpleHasher>(
 pub fn init_mock_db_with_deletions_afterwards<H: SimpleHasher>(
     kvs: &HashMap<KeyHash, OwnedValue>,
     deletions: Vec<KeyHash>,
-) -> (MockTreeStore, Version) {
+) -> (Arc<MockTreeStore>, Version) {
     assert!(!kvs.is_empty());
 
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     for (i, (key, value)) in kvs.clone().into_iter().enumerate() {
         let (_root_hash, write_batch) = tree
@@ -102,7 +102,7 @@ fn init_mock_db_versioned<H: SimpleHasher>(
     operations_by_version: Vec<Vec<(KeyHash, Vec<u8>)>>,
     with_proof: bool,
 ) -> (
-    MockTreeStore,
+    Arc<MockTreeStore>,
     Version,
     Option<
         Vec<(
@@ -114,8 +114,8 @@ fn init_mock_db_versioned<H: SimpleHasher>(
 ) {
     assert!(!operations_by_version.is_empty());
 
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
     let mut roots_proofs: Option<
         Vec<(
             RootHash,
@@ -175,7 +175,7 @@ fn init_mock_db_versioned_with_deletions<H: SimpleHasher>(
     operations_by_version: Vec<Vec<(KeyHash, Option<Vec<u8>>)>>,
     with_proof: bool,
 ) -> (
-    MockTreeStore,
+    Arc<MockTreeStore>,
     Version,
     Option<
         Vec<(
@@ -187,8 +187,8 @@ fn init_mock_db_versioned_with_deletions<H: SimpleHasher>(
 ) {
     assert!(!operations_by_version.is_empty());
 
-    let db = MockTreeStore::default();
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
     let mut roots_proofs = if with_proof { Some(Vec::new()) } else { None };
 
     if operations_by_version
@@ -376,7 +376,7 @@ pub fn test_get_with_proof<H: SimpleHasher>(
     (existent_kvs, nonexistent_keys): (HashMap<KeyHash, OwnedValue>, Vec<KeyHash>),
 ) {
     let (db, version) = init_mock_db::<H>(&existent_kvs);
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     test_existent_keys_impl(&tree, version, &existent_kvs);
     test_nonexistent_keys_impl(&tree, version, &nonexistent_keys);
@@ -391,7 +391,7 @@ pub fn test_get_with_proof_with_deletions<H: SimpleHasher>(
 ) {
     let (db, version) =
         init_mock_db_with_deletions_afterwards::<H>(&existent_kvs, deletions.clone());
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     for key in deletions {
         // We shouldn't test deleted keys as existent; they should be tested as nonexistent:
@@ -447,7 +447,7 @@ pub fn test_clairvoyant_construction_matches_interleaved_construction<H: SimpleH
     // `Result` which we haven't unwrapped yet)
     let (db_without_deletions, version_without_deletions, _) =
         init_mock_db_versioned::<H>(clairvoyant_operations_by_version, false);
-    let tree_without_deletions = JellyfishMerkleTree::<_, H>::new(&db_without_deletions);
+    let tree_without_deletions = JellyfishMerkleTree::<_, H>::new(db_without_deletions.clone());
 
     let root_hash_without_deletions =
         tree_without_deletions.get_root_hash(version_without_deletions);
@@ -456,7 +456,7 @@ pub fn test_clairvoyant_construction_matches_interleaved_construction<H: SimpleH
     // `Result` which we haven't unwrapped yet)
     let (db_with_deletions, version_with_deletions, _) =
         init_mock_db_versioned_with_deletions::<H>(operations_by_version, false);
-    let tree_with_deletions = JellyfishMerkleTree::<_, H>::new(&db_with_deletions);
+    let tree_with_deletions = JellyfishMerkleTree::<_, H>::new(db_with_deletions.clone());
 
     let root_hash_with_deletions = tree_with_deletions.get_root_hash(version_with_deletions);
 
@@ -651,7 +651,7 @@ pub fn test_get_with_proof_with_distinct_last_nibble<H: SimpleHasher>(
     kvs.insert(kv2.0, kv2.1);
 
     let (db, version) = init_mock_db::<H>(&kvs);
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     test_existent_keys_impl(&tree, version, &kvs);
 }
@@ -667,7 +667,7 @@ pub fn arb_tree_with_index(
 
 pub fn test_get_range_proof<H: SimpleHasher>((btree, n): (BTreeMap<KeyHash, OwnedValue>, usize)) {
     let (db, version) = init_mock_db::<H>(&btree.clone().into_iter().collect());
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
 
     let nth_key = btree.keys().nth(n).unwrap();
 
@@ -679,8 +679,8 @@ pub fn test_get_range_proof<H: SimpleHasher>((btree, n): (BTreeMap<KeyHash, Owne
     );
 }
 
-fn test_existent_keys_impl<'a, H: SimpleHasher>(
-    tree: &JellyfishMerkleTree<'a, MockTreeStore, H>,
+fn test_existent_keys_impl<H: SimpleHasher>(
+    tree: &JellyfishMerkleTree<Arc<MockTreeStore>, H>,
     version: Version,
     existent_kvs: &HashMap<KeyHash, OwnedValue>,
 ) {
@@ -693,8 +693,8 @@ fn test_existent_keys_impl<'a, H: SimpleHasher>(
     }
 }
 
-fn test_nonexistent_keys_impl<'a, H: SimpleHasher>(
-    tree: &JellyfishMerkleTree<'a, MockTreeStore, H>,
+fn test_nonexistent_keys_impl<H: SimpleHasher>(
+    tree: &JellyfishMerkleTree<Arc<MockTreeStore>, H>,
     version: Version,
     nonexistent_keys: &[KeyHash],
 ) {
@@ -873,6 +873,6 @@ fn compute_root_hash_impl<H: SimpleHasher>(kvs: Vec<(&[bool], [u8; 32])>) -> [u8
 pub fn test_get_leaf_count<H: SimpleHasher>(keys: HashSet<KeyHash>) {
     let kvs = keys.into_iter().map(|k| (k, vec![])).collect();
     let (db, version) = init_mock_db::<H>(&kvs);
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
     assert_eq!(tree.get_leaf_count(version).unwrap(), kvs.len())
 }

@@ -29,25 +29,25 @@ use crate::{
 /// A [`JellyfishMerkleTree`] instantiated using the `sha2::Sha256` hasher.
 /// This is a sensible default choice for most applications.
 #[cfg(any(test, feature = "sha2"))]
-pub type Sha256Jmt<'a, R> = JellyfishMerkleTree<'a, R, sha2::Sha256>;
+pub type Sha256Jmt<R> = JellyfishMerkleTree<R, sha2::Sha256>;
 
 /// A Jellyfish Merkle tree data structure, parameterized by a [`TreeReader`] `R`
 /// and a [`SimpleHasher`] `H`. See [`crate`] for description.
-pub struct JellyfishMerkleTree<'a, R, H: SimpleHasher> {
-    reader: &'a R,
+pub struct JellyfishMerkleTree<R, H: SimpleHasher> {
+    reader: R,
     _phantom_hasher: PhantomData<H>,
 }
 
 #[cfg(feature = "ics23")]
 pub mod ics23_impl;
 
-impl<'a, R, H> JellyfishMerkleTree<'a, R, H>
+impl<R, H> JellyfishMerkleTree<R, H>
 where
-    R: 'a + TreeReader,
+    R: TreeReader,
     H: SimpleHasher,
 {
     /// Creates a `JellyfishMerkleTree` backed by the given [`TreeReader`].
-    pub fn new(reader: &'a R) -> Self {
+    pub fn new(reader: R) -> Self {
         Self {
             reader,
             _phantom_hasher: Default::default(),
@@ -77,7 +77,7 @@ where
         node_hashes: Option<Vec<&HashMap<NibblePath, [u8; 32]>>>,
         first_version: Version,
     ) -> Result<(Vec<RootHash>, TreeUpdateBatch)> {
-        let mut tree_cache = TreeCache::new(self.reader, first_version)?;
+        let mut tree_cache = TreeCache::new(&self.reader, first_version)?;
         let hash_sets: Vec<_> = match node_hashes {
             Some(hashes) => hashes.into_iter().map(Some).collect(),
             None => (0..value_sets.len()).map(|_| None).collect(),
@@ -422,7 +422,7 @@ where
         value_sets: impl IntoIterator<Item = impl IntoIterator<Item = (KeyHash, Option<OwnedValue>)>>,
         first_version: Version,
     ) -> Result<(Vec<RootHash>, TreeUpdateBatch)> {
-        let mut tree_cache = TreeCache::new(self.reader, first_version)?;
+        let mut tree_cache = TreeCache::new(&self.reader, first_version)?;
         for (idx, value_set) in value_sets.into_iter().enumerate() {
             let version = first_version + idx as u64;
             for (i, (key, value)) in value_set.into_iter().enumerate() {
@@ -486,7 +486,7 @@ where
         value_sets: impl IntoIterator<Item = impl IntoIterator<Item = (KeyHash, Option<OwnedValue>)>>,
         first_version: Version,
     ) -> Result<(Vec<(RootHash, UpdateMerkleProof<H>)>, TreeUpdateBatch)> {
-        let mut tree_cache = TreeCache::new(self.reader, first_version)?;
+        let mut tree_cache = TreeCache::new(&self.reader, first_version)?;
         let mut batch_proofs = Vec::new();
         for (idx, value_set) in value_sets.into_iter().enumerate() {
             let version = first_version + idx as u64;
@@ -1032,7 +1032,7 @@ where
 
                     let (child_node_key, mut siblings_in_internal) = internal_node
                         .get_only_child_with_siblings::<H>(
-                            self.reader,
+                            &self.reader,
                             &next_node_key,
                             queried_child_index,
                         );

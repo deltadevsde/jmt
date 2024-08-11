@@ -1,7 +1,7 @@
 // Copyright (c) The Diem Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use crate::{mock::MockTreeStore, JellyfishMerkleTree, OwnedValue, SimpleHasher};
-use alloc::{rc::Rc, vec::Vec};
+use alloc::{rc::Rc, sync::Arc, vec::Vec};
 use borsh::{BorshDeserialize, BorshSerialize};
 use core::{convert::TryInto, panic};
 
@@ -101,8 +101,9 @@ fn mock_tree_from_values_with_version(
     values: Vec<Vec<(KeyHash, Option<OwnedValue>)>>,
     version: Version,
 ) -> impl TreeReader {
-    let db = MockTreeStore::default();
-    let tree: JellyfishMerkleTree<MockTreeStore, Sha256> = JellyfishMerkleTree::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree: JellyfishMerkleTree<Arc<MockTreeStore>, Sha256> =
+        JellyfishMerkleTree::new(db.clone());
 
     let (_root, batch) = tree.put_value_sets(values, version /* version */).unwrap();
     db.write_tree_update_batch(batch).unwrap();

@@ -21,7 +21,13 @@ pub trait TreeWriter {
     fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()>;
 }
 
-impl<'a, T: TreeWriter + ?Sized> TreeWriter for &'a Arc<T> {
+impl<T: TreeWriter + ?Sized> TreeWriter for Arc<T> {
+    fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()> {
+        (**self).write_node_batch(node_batch)
+    }
+}
+
+impl<T: TreeWriter + ?Sized> TreeWriter for Box<T> {
     fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()> {
         (**self).write_node_batch(node_batch)
     }

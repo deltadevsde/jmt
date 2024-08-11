@@ -19,7 +19,7 @@ fn test_restore_with_interruption<H: SimpleHasher>(
     first_batch_size: usize,
 ) {
     let (db, version) = init_mock_db::<H>(&entries.clone().into_iter().collect());
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
     let expected_root_hash = tree.get_root_hash(version).unwrap();
     let batch1: Vec<_> = entries.clone().into_iter().take(first_batch_size).collect();
 
@@ -149,12 +149,12 @@ proptest! {
 }
 
 fn assert_success<H: SimpleHasher>(
-    db: &MockTreeStore,
+    db: &Arc<MockTreeStore>,
     expected_root_hash: RootHash,
     btree: &BTreeMap<KeyHash, OwnedValue>,
     version: Version,
 ) {
-    let tree = JellyfishMerkleTree::<_, H>::new(db);
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
     for (key, value) in btree {
         assert_eq!(tree.get(*key, version).unwrap(), Some(value.clone()));
     }
@@ -170,7 +170,7 @@ fn restore_without_interruption<H: SimpleHasher>(
     try_resume: bool,
 ) {
     let (db, source_version) = init_mock_db::<H>(&btree.clone().into_iter().collect());
-    let tree = JellyfishMerkleTree::<_, H>::new(&db);
+    let tree = JellyfishMerkleTree::<_, H>::new(db.clone());
     let expected_root_hash = tree.get_root_hash(source_version).unwrap();
 
     let mut restore = if try_resume {

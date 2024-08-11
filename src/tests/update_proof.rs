@@ -1,5 +1,6 @@
 use crate::alloc::string::ToString;
 use alloc::format;
+use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
 use proptest::{proptest, strategy::Strategy};
@@ -30,8 +31,9 @@ fn update_nibble(original_key: &KeyHash, n: usize, nibble: u8) -> KeyHash {
 fn insert_and_perform_checks(batches: Vec<Vec<(KeyHash, Option<Vec<u8>>)>>) {
     let one_batch = batches.iter().flatten().cloned().collect::<Vec<_>>();
     // Insert as one batch and update one by one.
-    let db = MockTreeStore::default();
-    let tree: JellyfishMerkleTree<MockTreeStore, Sha256> = JellyfishMerkleTree::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree: JellyfishMerkleTree<Arc<MockTreeStore>, Sha256> =
+        JellyfishMerkleTree::new(db.clone());
 
     let (root, proof, batch) = tree
         .put_value_set_with_proof(one_batch.clone(), 0 /* version */)
@@ -46,8 +48,8 @@ fn insert_and_perform_checks(batches: Vec<Vec<(KeyHash, Option<Vec<u8>>)>>) {
 // Simple update proof test to check we can produce and verify merkle proofs for insertion
 #[test]
 fn test_update_proof() {
-    let db = MockTreeStore::default();
-    let tree = Sha256Jmt::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = Sha256Jmt::new(db.clone());
     // ```text
     //                     internal(root)
     //                    /        \
@@ -454,8 +456,8 @@ fn test_multi_deletes_after_inserts() {
 
 #[test]
 fn test_gets_then_delete_with_proof() {
-    let db = MockTreeStore::default();
-    let tree = Sha256Jmt::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = Sha256Jmt::new(db.clone());
 
     let key1: KeyHash = KeyHash([1; 32]);
 
@@ -487,8 +489,8 @@ fn many_keys_update_proof_and_verify_tree_root(seed: &[u8], num_keys: usize) {
     actual_seed[..seed.len()].copy_from_slice(seed);
     let _rng: StdRng = StdRng::from_seed(actual_seed);
 
-    let db = MockTreeStore::default();
-    let tree = Sha256Jmt::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = Sha256Jmt::new(db.clone());
 
     let mut kvs = vec![];
     for i in 0..num_keys {
@@ -531,8 +533,8 @@ fn many_versions_update_proof_and_verify_tree_root(seed: &[u8], num_versions: us
     actual_seed[..seed.len()].copy_from_slice(seed);
     let mut rng: StdRng = StdRng::from_seed(actual_seed);
 
-    let db = MockTreeStore::default();
-    let tree = Sha256Jmt::new(&db);
+    let db = Arc::new(MockTreeStore::default());
+    let tree = Sha256Jmt::new(db.clone());
 
     let mut kvs = vec![];
     let mut roots = vec![];

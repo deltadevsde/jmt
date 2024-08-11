@@ -96,7 +96,7 @@ pub mod restore;
 use bytes32ext::Bytes32Ext;
 pub use iterator::JellyfishMerkleIterator;
 #[cfg(feature = "ics23")]
-pub use tree::ics23_impl::ics23_spec;
+// pub use tree::ics23_impl::ics23_spec;
 pub use tree::JellyfishMerkleTree;
 #[cfg(any(test, feature = "sha2"))]
 pub use tree::Sha256Jmt;
@@ -196,7 +196,7 @@ impl AsRef<[u8]> for RootHash {
 /// plan to use ics23 non-existence proofs, you must ensure that keys are non-empty
 /// before creating `KeyHash`es.
 ///
-/// The [`JellyfishMerkleTree`] only stores key hashes, not full keys.  
+/// The [`JellyfishMerkleTree`] only stores key hashes, not full keys.
 #[derive(
     Copy,
     Clone,

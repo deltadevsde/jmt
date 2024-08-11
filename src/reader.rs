@@ -42,7 +42,25 @@ pub trait TreeReader {
     fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>>;
 }
 
-impl<'a, T: TreeReader + ?Sized> TreeReader for &'a Arc<T> {
+impl<T: TreeReader + ?Sized> TreeReader for Arc<T> {
+    fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
+        (**self).get_node_option(node_key)
+    }
+
+    fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>> {
+        (**self).get_rightmost_leaf()
+    }
+
+    fn get_value_option(
+        &self,
+        max_version: Version,
+        key_hash: KeyHash,
+    ) -> Result<Option<OwnedValue>> {
+        (**self).get_value_option(max_version, key_hash)
+    }
+}
+
+impl<T: TreeReader + ?Sized> TreeReader for Box<T> {
     fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
         (**self).get_node_option(node_key)
     }
