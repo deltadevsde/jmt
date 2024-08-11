@@ -1,3 +1,4 @@
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use anyhow::{format_err, Result};
 
@@ -39,6 +40,24 @@ pub trait TreeReader {
     /// Gets the rightmost leaf. Note that this assumes we are in the process of restoring the tree
     /// and all nodes are at the same version.
     fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>>;
+}
+
+impl<'a, T: TreeReader + ?Sized> TreeReader for &'a Arc<T> {
+    fn get_node_option(&self, node_key: &NodeKey) -> Result<Option<Node>> {
+        (**self).get_node_option(node_key)
+    }
+
+    fn get_rightmost_leaf(&self) -> Result<Option<(NodeKey, LeafNode)>> {
+        (**self).get_rightmost_leaf()
+    }
+
+    fn get_value_option(
+        &self,
+        max_version: Version,
+        key_hash: KeyHash,
+    ) -> Result<Option<OwnedValue>> {
+        (**self).get_value_option(max_version, key_hash)
+    }
 }
 
 /// Defines the ability for a tree to look up the preimage of its key hashes.

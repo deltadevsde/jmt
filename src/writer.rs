@@ -1,5 +1,6 @@
 use alloc::collections::{BTreeMap, BTreeSet};
 
+use alloc::sync::Arc;
 use alloc::vec::Vec;
 use anyhow::Result;
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -18,6 +19,12 @@ use crate::{
 pub trait TreeWriter {
     /// Writes a node batch into storage.
     fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()>;
+}
+
+impl<'a, T: TreeWriter + ?Sized> TreeWriter for &'a Arc<T> {
+    fn write_node_batch(&self, node_batch: &NodeBatch) -> Result<()> {
+        (**self).write_node_batch(node_batch)
+    }
 }
 
 /// Node batch that will be written into db atomically with other batches.

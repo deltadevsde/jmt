@@ -511,7 +511,7 @@ impl<H: SimpleHasher> SparseMerkleProof<H> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, borsh::BorshSerialize, borsh::BorshDeserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct UpdateMerkleProof<H: SimpleHasher>(
     #[borsh(bound(serialize = "", deserialize = ""))] Vec<SparseMerkleProof<H>>,
 );
@@ -519,6 +519,10 @@ pub struct UpdateMerkleProof<H: SimpleHasher>(
 impl<H: SimpleHasher> UpdateMerkleProof<H> {
     pub fn new(merkle_proofs: Vec<SparseMerkleProof<H>>) -> Self {
         UpdateMerkleProof(merkle_proofs)
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 
     /// Verifies an update of the [`JellyfishMerkleTree`], proving the transition from an `old_root_hash` to a `new_root_hash` ([`RootHash`])
