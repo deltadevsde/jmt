@@ -35,7 +35,7 @@ pub const INTERNAL_DOMAIN_SEPARATOR: &[u8] = b"JMT::IntrnalNode";
 /// be able to forge the node/leaf type, as this assertion wouldn't be checked.
 /// Providing a [`SparseMerkleInternalNode`] or a [`SparseMerkleLeafNode`] structure is sufficient to
 /// prove the node type as one would need to reverse the hash function to forge them.
-pub(crate) enum SparseMerkleNode {
+pub enum SparseMerkleNode {
     // The default sparse node
     Null,
     // The internal sparse merkle tree node
@@ -45,7 +45,7 @@ pub(crate) enum SparseMerkleNode {
 }
 
 impl SparseMerkleNode {
-    pub(crate) fn hash<H: SimpleHasher>(&self) -> [u8; 32] {
+    pub fn hash<H: SimpleHasher>(&self) -> [u8; 32] {
         match self {
             SparseMerkleNode::Null => SPARSE_MERKLE_PLACEHOLDER_HASH,
             Internal(node) => node.hash::<H>(),
@@ -58,7 +58,7 @@ impl SparseMerkleNode {
     Serialize, Deserialize, Clone, Copy, Eq, PartialEq, BorshSerialize, BorshDeserialize, Debug,
 )]
 #[cfg_attr(all(test, feature = "std"), derive(Arbitrary))]
-pub(crate) struct SparseMerkleInternalNode {
+pub struct SparseMerkleInternalNode {
     left_child: [u8; 32],
     right_child: [u8; 32],
 }
@@ -78,6 +78,14 @@ impl SparseMerkleInternalNode {
         hasher.update(&self.left_child);
         hasher.update(&self.right_child);
         hasher.finalize()
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        result.extend_from_slice(INTERNAL_DOMAIN_SEPARATOR);
+        result.extend_from_slice(&self.left_child);
+        result.extend_from_slice(&self.right_child);
+        result
     }
 }
 
@@ -147,11 +155,19 @@ impl SparseMerkleLeafNode {
         self.key_hash
     }
 
-    pub(crate) fn hash<H: SimpleHasher>(&self) -> [u8; 32] {
+    pub fn hash<H: SimpleHasher>(&self) -> [u8; 32] {
         let mut hasher = H::new();
         hasher.update(LEAF_DOMAIN_SEPARATOR);
         hasher.update(&self.key_hash.0);
         hasher.update(&self.value_hash.0);
         hasher.finalize()
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        result.extend_from_slice(LEAF_DOMAIN_SEPARATOR);
+        result.extend_from_slice(&self.key_hash.0);
+        result.extend_from_slice(&self.value_hash.0);
+        result
     }
 }
