@@ -80,7 +80,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use thiserror::Error;
 
-mod bytes32ext;
+pub mod bytes32ext;
 mod iterator;
 mod node_type;
 mod reader;

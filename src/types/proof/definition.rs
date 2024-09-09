@@ -521,6 +521,10 @@ impl<H: SimpleHasher> UpdateMerkleProof<H> {
         UpdateMerkleProof(merkle_proofs)
     }
 
+    pub fn proofs(&self) -> &Vec<SparseMerkleProof<H>> {
+        return &self.0;
+    }
+
     pub fn len(&self) -> usize {
         self.0.len()
     }

@@ -91,8 +91,8 @@ impl SparseMerkleInternalNode {
 
 #[derive(Eq, Copy, Serialize, Deserialize, borsh::BorshSerialize, borsh::BorshDeserialize)]
 pub struct SparseMerkleLeafNode {
-    key_hash: KeyHash,
-    value_hash: ValueHash,
+    pub key_hash: KeyHash,
+    pub value_hash: ValueHash,
 }
 
 // Manually implement Arbitrary to get the correct bounds. The derived Arbitrary impl adds a spurious
